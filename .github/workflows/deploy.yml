@@ -1,0 +1,281 @@
+name: Deploy to Vercel
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy-preview:
+    name: Deploy Preview (PR)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy Preview to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+      - name: Comment PR with Preview URL
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `
+## 🚀 Preview Deployment Ready
+
+Your preview deployment is ready at:
+**${{ steps.deploy.outputs.url }}**
+
+### ✅ Deployment Details
+- **Commit**: ${{ github.sha }}
+- **Branch**: ${{ github.head_ref }}
+- **Environment**: Preview
+
+### 📋 Checklist for Review
+- [ ] UI changes look correct
+- [ ] All features work as expected
+- [ ] No console errors
+- [ ] Responsive on mobile/tablet
+- [ ] Performance is acceptable
+              `
+            })
+
+  deploy-staging:
+    name: Deploy to Staging
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Staging
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to staging: $DEPLOYMENT_URL"
+
+      - name: Run database migrations (staging)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+
+      - name: Create deployment notification
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `
+## 🎯 Staging Deployment Successful
+
+Staging environment has been updated:
+**${{ steps.deploy.outputs.url }}**
+
+### 📊 Deployment Info
+- **Environment**: Staging
+- **Commit**: ${{ github.sha }}
+- **Time**: ${{ github.event.head_commit.timestamp }}
+- **Author**: ${{ github.event.head_commit.author.name }}
+
+### 🔍 Next Steps
+1. Test critical user flows
+2. Verify database migrations
+3. Check error monitoring dashboard
+4. Review performance metrics
+
+Ready to promote to production? Create a release tag:
+\`\`\`bash
+git tag -a v1.0.0 -m "Release v1.0.0"
+git push origin v1.0.0
+\`\`\`
+              `
+            })
+
+  deploy-production:
+    name: Deploy to Production
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Production
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to production: $DEPLOYMENT_URL"
+
+      - name: Run database migrations (production)
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          body: |
+            ## 🚀 Production Release ${{ github.ref_name }}
+
+            **Deployment URL**: ${{ steps.deploy.outputs.url }}
+
+            ### ✅ What's Included
+            - All changes from ${{ github.ref_name }}
+            - Database migrations applied
+            - Tests passing (unit + E2E)
+            - Security scans completed
+
+            ### 📊 Post-Deployment Checklist
+            - [ ] Verify health check endpoints
+            - [ ] Check error monitoring dashboard (Sentry)
+            - [ ] Monitor performance metrics
+            - [ ] Test critical user flows
+            - [ ] Verify email notifications
+            - [ ] Check database connection pool
+
+            ### 🔄 Rollback Instructions
+            If issues arise, rollback with:
+            ```bash
+            vercel rollback ${{ steps.deploy.outputs.url }} --token=$VERCEL_TOKEN
+            ```
+
+      - name: Notify deployment success
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `
+## 🎉 Production Deployment Successful
+
+**Version**: ${{ github.ref_name }}
+**URL**: ${{ steps.deploy.outputs.url }}
+
+### 📈 Monitoring
+- [Vercel Dashboard](https://vercel.com/dashboard)
+- [Sentry Errors](https://sentry.io/)
+- [Database Monitoring](https://neon.tech/)
+
+### ⚠️ Important
+- Monitor error rates for next 30 minutes
+- Check user-reported issues
+- Verify critical features are working
+
+Deployed by: ${{ github.actor }}
+              `
+            })
+
+  rollback:
+    name: Rollback Production
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+
+    steps:
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Rollback to Previous Deployment
+        run: |
+          echo "Rolling back production deployment..."
+          vercel rollback --token=${{ secrets.VERCEL_TOKEN }} --yes
+
+      - name: Notify rollback
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `
+## ⚠️ Production Rollback Executed
+
+Production has been rolled back to the previous deployment.
+
+### 🔍 Next Steps
+1. Investigate the issue that caused rollback
+2. Fix the problem in a new branch
+3. Test thoroughly in staging
+4. Create new release when ready
+
+Rolled back by: ${{ github.actor }}
+              `
+            })

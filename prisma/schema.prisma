@@ -1,0 +1,945 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & AUTHENTICATION
+// ============================================================================
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  emailVerified  DateTime?
+  passwordHash   String?
+  name           String?
+  image          String?
+  role           UserRole      @default(USER)
+  organizationId String?
+
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accounts       Account[]
+  sessions       Session[]
+  auditLogs      AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([organizationId])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================================================
+// ORGANIZATION
+// ============================================================================
+
+model Organization {
+  id       String        @id @default(cuid())
+  name     String
+  legalName String?
+  industry Industry?
+  region   String?
+  size     OrganizationSize?
+  euPresence Boolean @default(false)
+  headquarters String?
+  registrationNumber String?
+  description String?
+  logoUrl  String?
+  isDemo   Boolean       @default(false)
+
+  users                  User[]
+  aiSystems              AISystem[]
+  policies               Policy[]
+  aiLiteracyRequirements AILiteracyRequirement[]
+  trainingRecords        TrainingRecord[]
+  scheduledReports       ScheduledReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isDemo])
+}
+
+enum Industry {
+  FINANCIAL_SERVICES
+  HEALTHCARE
+  MANUFACTURING
+  RETAIL
+  TECHNOLOGY
+  PUBLIC_SECTOR
+  CONSULTING
+  EDUCATION
+  OTHER
+}
+
+enum OrganizationSize {
+  STARTUP
+  SMALL
+  MEDIUM
+  LARGE
+  ENTERPRISE
+}
+
+enum UserRole_Org {
+  COMPLIANCE_OFFICER
+  RISK_MANAGER
+  DATA_PROTECTION_OFFICER
+  PRODUCT_MANAGER
+  AI_ENGINEER
+  LEGAL_COUNSEL
+  AUDITOR
+  CONSULTANT
+  EXECUTIVE
+  OTHER
+}
+
+// ============================================================================
+// AI SYSTEM
+// ============================================================================
+
+model AISystem {
+  id                String           @id @default(cuid())
+  organizationId    String
+  name              String
+  businessPurpose   String           @db.Text
+  primaryUsers      UserType[]
+  deploymentStatus  DeploymentStatus
+  systemOwner       String?
+  technicalContact  String?
+  dataCategories    DataCategory[]
+  integrationPoints String?          @db.Text
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  riskClassification     RiskClassification?
+  gapAssessment          GapAssessment?
+  aiGovernance           AIGovernance?
+  aiRiskRegister         AIRiskRegister?
+  technicalDocumentation TechnicalDocumentation?
+  incidents              Incident[]
+  monitoringIndicators   MonitoringIndicator[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([deploymentStatus])
+}
+
+enum UserType {
+  INTERNAL_EMPLOYEES
+  EXTERNAL_CUSTOMERS
+  PARTNERS
+  PUBLIC
+}
+
+enum DeploymentStatus {
+  PLANNING
+  DEVELOPMENT
+  TESTING
+  PRODUCTION
+  RETIRED
+}
+
+enum DataCategory {
+  PERSONAL_DATA
+  SENSITIVE_DATA
+  BIOMETRIC_DATA
+  FINANCIAL_DATA
+  HEALTH_DATA
+  BEHAVIORAL_DATA
+  LOCATION_DATA
+  NO_PERSONAL_DATA
+}
+
+// ============================================================================
+// RISK CLASSIFICATION
+// ============================================================================
+
+model RiskClassification {
+  id                        String       @id @default(cuid())
+  aiSystemId                String       @unique
+  category                  RiskCategory
+  prohibitedPractices       String[]
+  highRiskCategories        String[]
+  interactsWithPersons      Boolean
+  reasoning                 String       @db.Text
+  applicableRequirements    String[]
+  classificationDate        DateTime     @default(now())
+  overrideApplied           Boolean      @default(false)
+  overrideJustification     String?      @db.Text
+
+  aiSystem AISystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+}
+
+enum RiskCategory {
+  PROHIBITED
+  HIGH_RISK
+  LIMITED_RISK
+  MINIMAL_RISK
+}
+
+// ============================================================================
+// GAP ASSESSMENT
+// ============================================================================
+
+model GapAssessment {
+  id               String    @id @default(cuid())
+  aiSystemId       String    @unique
+  overallScore     Float
+  lastAssessedDate DateTime  @default(now())
+
+  aiSystem     AISystem                @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  requirements RequirementAssessment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+}
+
+model RequirementAssessment {
+  id                  String              @id @default(cuid())
+  gapAssessmentId     String
+  category            RequirementCategory
+  title               String
+  description         String              @db.Text
+  regulatoryReference String
+  status              ComplianceStatus    @default(NOT_STARTED)
+  priority            Priority            @default(MEDIUM)
+  notes               String?             @db.Text
+  assignedTo          String?
+  dueDate             DateTime?
+  updatedBy           String
+
+  gapAssessment GapAssessment @relation(fields: [gapAssessmentId], references: [id], onDelete: Cascade)
+  evidence      Evidence[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([gapAssessmentId])
+  @@index([status])
+  @@index([category])
+}
+
+enum RequirementCategory {
+  RISK_MANAGEMENT
+  DATA_GOVERNANCE
+  TECHNICAL_DOCUMENTATION
+  RECORD_KEEPING
+  TRANSPARENCY
+  HUMAN_OVERSIGHT
+  ACCURACY_ROBUSTNESS
+  CYBERSECURITY
+}
+
+enum ComplianceStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  IMPLEMENTED
+  NOT_APPLICABLE
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Evidence {
+  id                      String       @id @default(cuid())
+  requirementAssessmentId String
+  type                    EvidenceType
+  title                   String
+  description             String?      @db.Text
+  fileUrl                 String?
+  linkUrl                 String?
+  textContent             String?      @db.Text
+  uploadedBy              String
+  uploadedAt              DateTime     @default(now())
+
+  requirementAssessment RequirementAssessment @relation(fields: [requirementAssessmentId], references: [id], onDelete: Cascade)
+
+  @@index([requirementAssessmentId])
+}
+
+enum EvidenceType {
+  TEXT
+  FILE
+  LINK
+}
+
+// ============================================================================
+// AI GOVERNANCE
+// ============================================================================
+
+model AIGovernance {
+  id                  String  @id @default(cuid())
+  aiSystemId          String  @unique
+  governanceStructure String? @db.Text
+
+  aiSystem AISystem         @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  roles    GovernanceRole[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+}
+
+model GovernanceRole {
+  id              String             @id @default(cuid())
+  aiGovernanceId  String
+  roleType        GovernanceRoleType
+  personName      String
+  email           String
+  department      String
+  responsibilities String[]
+  assignedDate    DateTime           @default(now())
+  isActive        Boolean            @default(true)
+
+  aiGovernance AIGovernance @relation(fields: [aiGovernanceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiGovernanceId])
+  @@index([roleType])
+}
+
+enum GovernanceRoleType {
+  SYSTEM_OWNER
+  RISK_OWNER
+  HUMAN_OVERSIGHT
+  DATA_PROTECTION_OFFICER
+  TECHNICAL_LEAD
+  COMPLIANCE_OFFICER
+}
+
+// ============================================================================
+// POLICIES
+// ============================================================================
+
+model Policy {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  title              String
+  type               PolicyType
+  content            String       @db.Text
+  version            Int          @default(1)
+  status             PolicyStatus @default(DRAFT)
+  regulatoryMapping  String[]
+  draftedBy          String
+  draftedDate        DateTime     @default(now())
+  reviewedBy         String?
+  reviewedDate       DateTime?
+  approvedBy         String?
+  approvedDate       DateTime?
+  publishedDate      DateTime?
+  distributionMethod String?
+  nextReviewDate     DateTime?
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  policyVersions PolicyVersion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([type])
+  @@index([status])
+}
+
+enum PolicyType {
+  AI_ETHICS
+  RISK_MANAGEMENT
+  TRANSPARENCY
+  HUMAN_OVERSIGHT
+  INCIDENT_RESPONSE
+  DATA_GOVERNANCE
+  CUSTOM
+}
+
+enum PolicyStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  PUBLISHED
+  ARCHIVED
+}
+
+model PolicyVersion {
+  id           String   @id @default(cuid())
+  policyId     String
+  version      Int
+  versionDate  DateTime @default(now())
+  versionNotes String?  @db.Text
+  savedBy      String
+  snapshotData String   @db.Text
+
+  policy Policy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+
+  @@unique([policyId, version])
+  @@index([policyId])
+}
+
+// ============================================================================
+// AI RISK MANAGEMENT
+// ============================================================================
+
+model AIRiskRegister {
+  id               String   @id @default(cuid())
+  aiSystemId       String   @unique
+  lastAssessedDate DateTime @default(now())
+  assessedBy       String
+
+  aiSystem AISystem @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  risks    Risk[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+}
+
+model Risk {
+  id                     String             @id @default(cuid())
+  riskRegisterId         String
+  title                  String
+  type                   RiskType
+  description            String             @db.Text
+  affectedStakeholders   String[]
+  potentialImpact        String             @db.Text
+  likelihood             Int
+  impact                 Int
+  inherentRiskScore      Int
+  riskLevel              RiskLevel
+  treatmentDecision      TreatmentDecision?
+  treatmentJustification String?            @db.Text
+  residualLikelihood     Int?
+  residualImpact         Int?
+  residualRiskScore      Int?
+
+  riskRegister      AIRiskRegister       @relation(fields: [riskRegisterId], references: [id], onDelete: Cascade)
+  mitigationActions MitigationAction[]
+  humanOversight    HumanOversight?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([riskRegisterId])
+  @@index([type])
+  @@index([riskLevel])
+}
+
+enum RiskType {
+  BIAS
+  SAFETY
+  MISUSE
+  TRANSPARENCY
+  PRIVACY
+  CYBERSECURITY
+  OTHER
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TreatmentDecision {
+  ACCEPT
+  MITIGATE
+  TRANSFER
+  AVOID
+}
+
+model MitigationAction {
+  id                  String       @id @default(cuid())
+  riskId              String
+  description         String       @db.Text
+  responsibleParty    String
+  dueDate             DateTime?
+  status              ActionStatus @default(PLANNED)
+  effectivenessRating Int?
+  completionDate      DateTime?
+  notes               String?      @db.Text
+
+  risk Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([riskId])
+  @@index([status])
+}
+
+enum ActionStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model HumanOversight {
+  id                  String              @id @default(cuid())
+  riskId              String              @unique
+  monitoringFrequency MonitoringFrequency
+  oversightMethod     String              @db.Text
+  escalationTriggers  String[]
+  overrideCapability  Boolean
+  responsiblePerson   String
+  effectivenessNotes  String?             @db.Text
+
+  risk Risk @relation(fields: [riskId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([riskId])
+}
+
+enum MonitoringFrequency {
+  REAL_TIME
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// ============================================================================
+// TECHNICAL DOCUMENTATION
+// ============================================================================
+
+model TechnicalDocumentation {
+  id                     String   @id @default(cuid())
+  aiSystemId             String   @unique
+  version                String   @default("1.0")
+  versionDate            DateTime @default(now())
+  versionNotes           String?  @db.Text
+  completenessPercentage Float    @default(0)
+  intendedUse            String?  @db.Text
+  foreseeableMisuse      String?  @db.Text
+  systemArchitecture     String?  @db.Text
+  trainingData           String?  @db.Text
+  modelPerformance       String?  @db.Text
+  validationTesting      String?  @db.Text
+  humanOversightDoc      String?  @db.Text
+  cybersecurity          String?  @db.Text
+  preparedBy             String
+  reviewedBy             String?
+  approvedBy             String?
+  approvalDate           DateTime?
+
+  aiSystem    AISystem             @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  attachments DocumentAttachment[]
+  versions    DocumentVersion[]
+
+  updatedBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+}
+
+model DocumentAttachment {
+  id                       String               @id @default(cuid())
+  technicalDocumentationId String
+  fileName                 String
+  fileType                 String
+  fileSize                 Int
+  fileUrl                  String
+  section                  DocumentationSection
+  description              String?              @db.Text
+  uploadedBy               String
+  uploadedAt               DateTime             @default(now())
+
+  technicalDocumentation TechnicalDocumentation @relation(fields: [technicalDocumentationId], references: [id], onDelete: Cascade)
+
+  @@index([technicalDocumentationId])
+  @@index([section])
+}
+
+enum DocumentationSection {
+  INTENDED_USE
+  FORESEEABLE_MISUSE
+  SYSTEM_ARCHITECTURE
+  TRAINING_DATA
+  MODEL_PERFORMANCE
+  VALIDATION_TESTING
+  HUMAN_OVERSIGHT
+  CYBERSECURITY
+  GENERAL
+}
+
+model DocumentVersion {
+  id                       String   @id @default(cuid())
+  technicalDocumentationId String
+  version                  String
+  versionDate              DateTime @default(now())
+  versionNotes             String?  @db.Text
+  savedBy                  String
+  snapshotData             String   @db.Text
+
+  technicalDocumentation TechnicalDocumentation @relation(fields: [technicalDocumentationId], references: [id], onDelete: Cascade)
+
+  @@unique([technicalDocumentationId, version])
+  @@index([technicalDocumentationId])
+}
+
+// ============================================================================
+// AI LITERACY & TRAINING
+// ============================================================================
+
+model AILiteracyRequirement {
+  id             String            @id @default(cuid())
+  organizationId String
+  role           String
+  topics         Json
+  frequency      TrainingFrequency
+  durationHours  Float?
+  isActive       Boolean           @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([role])
+}
+
+enum TrainingFrequency {
+  ONE_TIME
+  ANNUAL
+  SEMI_ANNUAL
+  QUARTERLY
+}
+
+model TrainingRecord {
+  id                 String          @id @default(cuid())
+  organizationId     String
+  personName         String
+  role               String
+  topicId            String
+  topicName          String
+  completionDate     DateTime?
+  trainingMethod     TrainingMethod?
+  durationHours      Float?
+  completionEvidence String?
+  notes              String?         @db.Text
+  status             TrainingStatus  @default(NOT_STARTED)
+  selfAttested       Boolean         @default(false)
+  approvedBy         String?
+  approvalDate       DateTime?
+  nextDueDate        DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([personName])
+  @@index([status])
+}
+
+enum TrainingMethod {
+  ONLINE_COURSE
+  WORKSHOP
+  SELF_STUDY
+  CERTIFICATION
+  CONFERENCE
+  OTHER
+}
+
+enum TrainingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+// ============================================================================
+// INCIDENT & MONITORING
+// ============================================================================
+
+model Incident {
+  id                    String             @id @default(cuid())
+  incidentNumber        String             @unique
+  aiSystemId            String
+  title                 String
+  incidentDate          DateTime
+  reportedDate          DateTime           @default(now())
+  reportedBy            String
+  description           String             @db.Text
+  severity              IncidentSeverity
+  category              String?
+  businessImpact        String             @db.Text
+  complianceImpact      String?            @db.Text
+  affectedUsersCount    Int?
+  affectedUsers         String             @db.Text
+  rootCause             String?            @db.Text
+  rootCauseAnalysis     String?            @db.Text
+  immediateActions      String             @db.Text
+  preventiveMeasures    String?            @db.Text
+  status                IncidentStatus     @default(OPEN)
+  resolutionSummary     String?            @db.Text
+  lessonsLearned        String?            @db.Text
+  resolvedDate          DateTime?
+  closedDate            DateTime?
+  notificationRequired  Boolean            @default(false)
+  notificationSubmitted Boolean            @default(false)
+  notificationDate      DateTime?
+  authorityResponse     String?            @db.Text
+
+  aiSystem               AISystem                @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  notificationAssessment NotificationAssessment?
+  actionItems            ActionItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+  @@index([severity])
+  @@index([status])
+  @@index([incidentDate])
+}
+
+enum IncidentSeverity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+model NotificationAssessment {
+  id                            String   @id @default(cuid())
+  incidentId                    String   @unique
+  isSeriousIncident             Boolean
+  hasHealthSafetyImpact         Boolean
+  hasFundamentalRightsViolation Boolean
+  affectsHighRiskSystem         Boolean
+  notificationRequired          Boolean
+  assessmentDate                DateTime @default(now())
+  assessedBy                    String
+  notificationTemplate          String?  @db.Text
+  authorityContact              String?
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId])
+}
+
+model ActionItem {
+  id             String       @id @default(cuid())
+  incidentId     String
+  description    String       @db.Text
+  assignedTo     String
+  dueDate        DateTime?
+  status         ActionStatus @default(PLANNED)
+  completionDate DateTime?
+  notes          String?      @db.Text
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([incidentId])
+  @@index([status])
+}
+
+// ============================================================================
+// MONITORING INDICATORS
+// ============================================================================
+
+model MonitoringIndicator {
+  id                String              @id @default(cuid())
+  aiSystemId        String
+  name              String
+  category          IndicatorCategory
+  description       String              @db.Text
+  measurementMethod String              @db.Text
+  targetValue       Float?
+  thresholdValue    Float?
+  alertCondition    AlertCondition?
+  reviewFrequency   MonitoringFrequency
+  unit              String?
+  isActive          Boolean             @default(true)
+
+  aiSystem AISystem         @relation(fields: [aiSystemId], references: [id], onDelete: Cascade)
+  values   IndicatorValue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aiSystemId])
+  @@index([category])
+  @@index([isActive])
+}
+
+enum IndicatorCategory {
+  ACCURACY
+  BIAS
+  DATA_DRIFT
+  USAGE
+  ERROR_RATE
+  USER_FEEDBACK
+  CUSTOM
+}
+
+enum AlertCondition {
+  ABOVE_THRESHOLD
+  BELOW_THRESHOLD
+  OUTSIDE_RANGE
+}
+
+model IndicatorValue {
+  id                String   @id @default(cuid())
+  indicatorId       String
+  value             Float
+  measurementDate   DateTime @default(now())
+  recordedBy        String
+  notes             String?  @db.Text
+  alertTriggered    Boolean  @default(false)
+  relatedIncidentId String?
+
+  indicator MonitoringIndicator @relation(fields: [indicatorId], references: [id], onDelete: Cascade)
+
+  @@index([indicatorId])
+  @@index([measurementDate])
+}
+
+// ============================================================================
+// SCHEDULED REPORTS
+// ============================================================================
+
+model ScheduledReport {
+  id             String          @id @default(cuid())
+  organizationId String
+  reportType     ReportType
+  frequency      ReportFrequency
+  recipients     String[]
+  deliveryDay    Int
+  isActive       Boolean         @default(true)
+  lastSentDate   DateTime?
+  nextSendDate   DateTime
+  createdBy      String
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([isActive])
+  @@index([nextSendDate])
+}
+
+enum ReportType {
+  EXECUTIVE_SUMMARY
+  GAP_ANALYSIS
+  RISK_REPORT
+  INCIDENT_LOG
+  TRAINING_COMPLIANCE
+  FULL_PACKAGE
+}
+
+enum ReportFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+// ============================================================================
+// AUDIT LOG
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
