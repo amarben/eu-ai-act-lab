@@ -2,7 +2,7 @@ module.exports = {
   apps: [{
     name: 'eu-ai-act-lab',
     script: 'node_modules/next/dist/bin/next',
-    args: 'dev',
+    args: 'start',
     cwd: '/var/www/eu-ai-act-lab',
     instances: 1,
     exec_mode: 'fork',
@@ -11,7 +11,7 @@ module.exports = {
       NEXTAUTH_SECRET: "btNzRL2n4g1AVcSXqE/Bop8LvElaytMew/Kr8BqWCfU=",
       NEXTAUTH_URL: "https://eu-ai-act.standarity.com",
       GEMINI_API_KEY: "AIzaSyCxWiN9a16uaMsL8mMa0MLbizX7ZQlGvw0",
-      NODE_ENV: "development",
+      NODE_ENV: "production",
       NEXT_PUBLIC_APP_URL: "https://eu-ai-act.standarity.com",
       PORT: "3001",
       GEMINI_RATE_LIMIT_PER_MINUTE: "60",
