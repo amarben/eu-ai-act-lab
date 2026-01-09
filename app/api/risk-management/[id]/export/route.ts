@@ -79,7 +79,7 @@ export async function GET(
     const filename = `Risk_Register_${systemName}_${date}.${extension}`;
 
     // Return document as downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,

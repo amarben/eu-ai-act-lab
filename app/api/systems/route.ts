@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
           select: { category: true },
         },
         gapAssessment: {
-          select: { overallStatus: true, overallScore: true },
+          select: { overallScore: true },
         },
       },
       orderBy: { createdAt: 'desc' },
@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
       data: {
         name: data.name,
         businessPurpose: data.businessPurpose,
-        primaryUsers: data.primaryUsers,
+        primaryUsers: data.primaryUsers as any, // Type assertion for enum array
         deploymentStatus: data.deploymentStatus,
-        dataCategories: data.dataProcessed || [], // Map dataProcessed to dataCategories
+        dataCategories: (data.dataProcessed || []) as any, // Type assertion for enum array
         organizationId: session.user.organizationId,
       },
     });

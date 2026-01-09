@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { errorResponse } from '@/lib/api-response';
-import { ValidationError, UnauthorizedError, ApplicationError } from '@/lib/errors';
+import { ValidationError, UnauthorizedError, AppError } from '@/lib/errors';
 import { validateCertificationReadiness } from '@/lib/certification-validator';
 import { generateComplianceCertificate } from '@/lib/document-generators/compliance-certificate';
 import { convertDocument } from '@/lib/pdf-converter';
@@ -32,8 +32,8 @@ export async function GET(
     const format = searchParams.get('format') || 'pdf'; // pdf or docx
     const allowDraft = searchParams.get('allowDraft') === 'true'; // Allow export of non-ready systems
 
-    // Fetch AI system with organization data
-    const aiSystem = await prisma.aiSystem.findFirst({
+    // Fetch AI system with organization data and risk classification
+    const aiSystem = await prisma.aISystem.findFirst({
       where: {
         id: systemId,
         organizationId: session.user.organizationId,
@@ -43,6 +43,11 @@ export async function GET(
           select: {
             name: true,
             industry: true,
+          },
+        },
+        riskClassification: {
+          select: {
+            category: true,
           },
         },
       },
@@ -78,7 +83,7 @@ export async function GET(
         id: aiSystem.id,
         name: aiSystem.name,
         businessPurpose: aiSystem.businessPurpose,
-        riskCategory: aiSystem.riskCategory,
+        riskCategory: aiSystem.riskClassification?.category || 'UNKNOWN',
         organizationName: aiSystem.organization.name,
       },
       validationResult,
@@ -99,7 +104,7 @@ export async function GET(
     const filename = `EU_AI_Act_${certificateType}_${systemName}_${date}.${extension}`;
 
     // Return document as downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,

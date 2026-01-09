@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     const validatedData = createDocumentationSchema.parse(body);
 
     // Verify the AI system exists and belongs to the user's organization
-    const aiSystem = await prisma.aiSystem.findFirst({
+    const aiSystem = await prisma.aISystem.findFirst({
       where: {
         id: validatedData.aiSystemId,
         organizationId: session.user.organizationId,

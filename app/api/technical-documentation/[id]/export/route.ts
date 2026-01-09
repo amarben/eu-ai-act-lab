@@ -73,7 +73,7 @@ export async function GET(
     const filename = `Technical_Documentation_${systemName}_v${documentation.version}_${date}.${extension}`;
 
     // Return document as downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,

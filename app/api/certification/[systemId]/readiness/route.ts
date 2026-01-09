@@ -25,7 +25,7 @@ export async function GET(
     const systemId = params.systemId;
 
     // Verify system belongs to user's organization
-    const aiSystem = await prisma.aiSystem.findFirst({
+    const aiSystem = await prisma.aISystem.findFirst({
       where: {
         id: systemId,
         organizationId: session.user.organizationId,

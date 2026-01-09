@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch all AI systems with related data
-    const systems = await prisma.aiSystem.findMany({
+    const systems = await prisma.aISystem.findMany({
       where: {
         organizationId: session.user.organizationId,
       },
@@ -124,6 +124,14 @@ export async function GET(request: NextRequest) {
       percentage: data.total > 0 ? Math.round((data.implemented / data.total) * 100) : 0,
     }));
 
+    // Helper to calculate risk level from score
+    const calculateRiskLevel = (score: number | null): string | null => {
+      if (score === null) return null;
+      if (score <= 6) return 'LOW';
+      if (score <= 15) return 'MEDIUM';
+      return 'HIGH';
+    };
+
     // Aggregate risk data
     const allRisks = systems.flatMap((system) =>
       system.aiRiskRegister
@@ -132,7 +140,7 @@ export async function GET(request: NextRequest) {
             title: risk.title,
             type: risk.type,
             riskLevel: risk.riskLevel,
-            residualRiskLevel: risk.residualRiskLevel,
+            residualRiskLevel: calculateRiskLevel(risk.residualRiskScore),
           }))
         : []
     );
@@ -144,7 +152,7 @@ export async function GET(request: NextRequest) {
         title: incident.title,
         severity: incident.severity,
         status: incident.status,
-        occurredAt: incident.occurredAt,
+        occurredAt: incident.incidentDate,
       }))
     );
 
@@ -179,7 +187,7 @@ export async function GET(request: NextRequest) {
     const filename = `Executive_Summary_${orgName}_${date}.${extension}`;
 
     // Return document as downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,

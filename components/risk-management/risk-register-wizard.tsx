@@ -275,7 +275,7 @@ export function RiskRegisterWizard({ systems }: RiskRegisterWizardProps) {
                       <h4 className="font-semibold">Risk #{index + 1}</h4>
                       <Badge className={color}>{level}</Badge>
                       <span className="text-sm text-muted-foreground">
-                        (Score: {likelihood × impact})
+                        (Score: {likelihood * impact})
                       </span>
                     </div>
                     {fields.length > 1 && (

@@ -84,7 +84,7 @@ export async function GET(
     const filename = `Gap_Assessment_${systemName}_${date}.${extension}`;
 
     // Return document as downloadable file
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': `attachment; filename="${filename}"`,
