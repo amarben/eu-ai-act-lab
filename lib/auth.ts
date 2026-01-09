@@ -16,6 +16,35 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: '/auth/verify-request',
   },
   providers: [
+    // Standarity SSO Provider
+    {
+      id: 'standarity',
+      name: 'Standarity SSO',
+      type: 'oauth',
+      version: '2.0',
+      authorization: {
+        url: `${process.env.SSO_PROVIDER_URL}/api/oauth/authorize`,
+        params: {
+          scope: 'openid profile email',
+          response_type: 'code',
+        },
+      },
+      token: `${process.env.SSO_PROVIDER_URL}/api/oauth/token`,
+      userinfo: `${process.env.SSO_PROVIDER_URL}/api/oauth/userinfo`,
+      clientId: process.env.SSO_CLIENT_ID,
+      clientSecret: process.env.SSO_CLIENT_SECRET,
+      profile(profile) {
+        return {
+          id: profile.sub,
+          email: profile.email,
+          name: profile.name,
+          image: profile.picture,
+          role: profile.role || 'USER',
+          organizationId: profile.organizationId,
+          emailVerified: profile.email_verified ? new Date() : null,
+        };
+      },
+    },
     CredentialsProvider({
       name: 'credentials',
       credentials: {

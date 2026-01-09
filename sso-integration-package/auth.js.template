@@ -1,0 +1,6 @@
+import { createSSOAuth } from '@/lib/sso-auth';
+import { prisma } from '@/lib/prisma';
+
+export const { handlers, signIn, signOut, auth } = createSSOAuth({
+  prisma,
+});

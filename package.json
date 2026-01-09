@@ -4,9 +4,9 @@
   "description": "EU AI Act Implementation Lab - Practical compliance tool",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3003",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p 3003",
     "lint": "next lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

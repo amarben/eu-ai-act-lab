@@ -2,15 +2,21 @@ module.exports = {
   apps: [{
     name: 'eu-ai-act-lab',
     script: 'node_modules/next/dist/bin/next',
-    args: 'start',
+    args: 'dev',
     cwd: '/var/www/eu-ai-act-lab',
-    instances: 'max',
-    exec_mode: 'cluster',
+    instances: 1,
+    exec_mode: 'fork',
     env: {
-      NODE_ENV: 'production',
-      PORT: 3000
+      DATABASE_URL: "postgresql://euaiact_user:SecurePass2024!@localhost:5432/euaiact_prod",
+      NEXTAUTH_SECRET: "btNzRL2n4g1AVcSXqE/Bop8LvElaytMew/Kr8BqWCfU=",
+      NEXTAUTH_URL: "https://eu-ai-act.standarity.com",
+      GEMINI_API_KEY: "AIzaSyCxWiN9a16uaMsL8mMa0MLbizX7ZQlGvw0",
+      NODE_ENV: "development",
+      NEXT_PUBLIC_APP_URL: "https://eu-ai-act.standarity.com",
+      PORT: "3001",
+      GEMINI_RATE_LIMIT_PER_MINUTE: "60",
+      GEMINI_RATE_LIMIT_PER_DAY: "1500"
     },
-    env_file: '.env.production',
     error_file: 'logs/err.log',
     out_file: 'logs/out.log',
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
@@ -19,8 +25,6 @@ module.exports = {
     watch: false,
     max_memory_restart: '1G',
     min_uptime: '10s',
-    max_restarts: 10,
-    kill_timeout: 5000,
-    listen_timeout: 10000
+    max_restarts: 10
   }]
 };

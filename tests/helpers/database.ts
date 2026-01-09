@@ -293,7 +293,7 @@ export async function seedIncidentDemoData(userEmail: string = 'rachel.thompson@
  */
 export async function createTestGovernance(
   aiSystemId: string,
-  roles: Array<{
+  rolesOrOptions?: Array<{
     roleType: 'SYSTEM_OWNER' | 'RISK_OWNER' | 'HUMAN_OVERSIGHT' | 'DATA_PROTECTION_OFFICER' | 'TECHNICAL_LEAD' | 'COMPLIANCE_OFFICER';
     personName: string;
     email: string;
@@ -301,7 +301,11 @@ export async function createTestGovernance(
     responsibilities?: string;
     assignedDate?: Date;
     isActive?: boolean;
-  }>
+  }> | {
+    hasSystemOwner?: boolean;
+    hasRiskOwner?: boolean;
+    hasComplianceOfficer?: boolean;
+  }
 ) {
   // Create the governance structure
   const governance = await prisma.aIGovernance.create({
@@ -311,9 +315,51 @@ export async function createTestGovernance(
     },
   });
 
+  // Support both array of roles and options object
+  let rolesToCreate: Array<{
+    roleType: 'SYSTEM_OWNER' | 'RISK_OWNER' | 'HUMAN_OVERSIGHT' | 'DATA_PROTECTION_OFFICER' | 'TECHNICAL_LEAD' | 'COMPLIANCE_OFFICER';
+    personName: string;
+    email: string;
+    department?: string;
+    responsibilities?: string;
+    assignedDate?: Date;
+    isActive?: boolean;
+  }> = [];
+
+  if (Array.isArray(rolesOrOptions)) {
+    // Old behavior - array of roles
+    rolesToCreate = rolesOrOptions;
+  } else if (rolesOrOptions) {
+    // New behavior - create roles based on boolean flags
+    if (rolesOrOptions.hasSystemOwner) {
+      rolesToCreate.push({
+        roleType: 'SYSTEM_OWNER',
+        personName: 'System Owner',
+        email: 'system.owner@test.com',
+        department: 'IT',
+      });
+    }
+    if (rolesOrOptions.hasRiskOwner) {
+      rolesToCreate.push({
+        roleType: 'RISK_OWNER',
+        personName: 'Risk Owner',
+        email: 'risk.owner@test.com',
+        department: 'Risk Management',
+      });
+    }
+    if (rolesOrOptions.hasComplianceOfficer) {
+      rolesToCreate.push({
+        roleType: 'COMPLIANCE_OFFICER',
+        personName: 'Compliance Officer',
+        email: 'compliance@test.com',
+        department: 'Compliance',
+      });
+    }
+  }
+
   // Create all roles
   const createdRoles = await Promise.all(
-    roles.map((role) =>
+    rolesToCreate.map((role) =>
       prisma.governanceRole.create({
         data: {
           aiGovernanceId: governance.id,
@@ -332,6 +378,150 @@ export async function createTestGovernance(
   return {
     governance,
     roles: createdRoles,
+  };
+}
+
+/**
+ * Create a test gap assessment with customizable completeness
+ */
+export async function createTestGapAssessment(
+  aiSystemId: string,
+  options?: {
+    overallScore?: number;
+    allRequirementsImplemented?: boolean;
+  }
+) {
+  const overallScore = options?.overallScore ?? 75;
+  const allImplemented = options?.allRequirementsImplemented ?? false;
+
+  return await prisma.gapAssessment.create({
+    data: {
+      aiSystemId,
+      overallScore,
+      lastAssessedDate: new Date(),
+    },
+  });
+}
+
+/**
+ * Create test technical documentation with customizable completeness
+ */
+export async function createTestTechnicalDocumentation(
+  aiSystemId: string,
+  options?: {
+    intendedUse?: string;
+    foreseeableMisuse?: string;
+    systemArchitecture?: string;
+    trainingData?: string;
+    modelPerformance?: string;
+    validationTesting?: string;
+    humanOversightDoc?: string;
+    cybersecurity?: string;
+    completenessPercentage?: number;
+  }
+) {
+  const completeness = options?.completenessPercentage ?? 100;
+
+  // Get a test user for document ownership
+  const user = await prisma.user.findFirst({
+    where: { role: 'ADMIN' },
+  });
+
+  if (!user) {
+    throw new Error('No admin user found for technical documentation test data');
+  }
+
+  return await prisma.technicalDocumentation.create({
+    data: {
+      aiSystemId,
+      version: '1.0',
+      versionDate: new Date(),
+      versionNotes: 'Test documentation',
+      completenessPercentage: completeness,
+      intendedUse: options?.intendedUse || 'Complete intended use description (100+ chars) covering system purpose, target users, and deployment context.',
+      foreseeableMisuse: options?.foreseeableMisuse || 'Complete foreseeable misuse documentation (100+ chars) identifying potential abuse scenarios and mitigation measures.',
+      systemArchitecture: options?.systemArchitecture || 'Complete system architecture details (100+ chars) describing components, data flows, and technical infrastructure.',
+      trainingData: options?.trainingData || 'Complete training data documentation (100+ chars) covering data sources, quality measures, and governance.',
+      modelPerformance: options?.modelPerformance || 'Complete model performance metrics (100+ chars) including accuracy, fairness, and robustness testing results.',
+      validationTesting: options?.validationTesting || 'Complete validation testing results (100+ chars) documenting pre-deployment and ongoing validation procedures.',
+      humanOversightDoc: options?.humanOversightDoc || 'Complete human oversight procedures (100+ chars) defining monitoring, escalation, and intervention mechanisms.',
+      cybersecurity: options?.cybersecurity || 'Complete cybersecurity measures (100+ chars) covering security architecture, threat protection, and incident response.',
+      preparedBy: user.id,
+      reviewedBy: user.id,
+      approvedBy: user.id,
+      approvalDate: new Date(),
+      updatedBy: user.id,
+    },
+  });
+}
+
+/**
+ * Create a test risk register with risks and mitigation actions
+ */
+export async function createTestRiskRegister(
+  aiSystemId: string,
+  options?: {
+    allRisksMitigated?: boolean;
+  }
+) {
+  const allMitigated = options?.allRisksMitigated ?? true;
+
+  // Create risk register
+  const riskRegister = await prisma.aIRiskRegister.create({
+    data: {
+      aiSystemId,
+      lastAssessedDate: new Date(),
+      assessedBy: 'Test Risk Manager',
+    },
+  });
+
+  // Create a sample high-risk with mitigation
+  const highRisk = await prisma.risk.create({
+    data: {
+      riskRegisterId: riskRegister.id,
+      type: 'BIAS',
+      title: 'Test High Risk - Bias in Decision Making',
+      description: 'Potential for algorithmic bias affecting protected demographics',
+      affectedStakeholders: ['End users', 'Compliance team'],
+      potentialImpact: 'Discriminatory outcomes and regulatory violations',
+      likelihood: 4,
+      impact: 5,
+      inherentRiskScore: 20,
+      riskLevel: 'HIGH',
+      treatmentDecision: 'MITIGATE',
+      treatmentJustification: 'High impact requires comprehensive mitigation',
+      createdBy: 'admin@test.com',
+    },
+  });
+
+  if (allMitigated) {
+    // Create completed mitigation action
+    await prisma.mitigationAction.create({
+      data: {
+        riskId: highRisk.id,
+        description: 'Implement comprehensive bias testing framework with regular audits',
+        responsibleParty: 'AI Ethics Team',
+        dueDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // 7 days ago
+        status: 'COMPLETED',
+        completionDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), // 3 days ago
+      },
+    });
+  } else {
+    // Create planned mitigation action
+    await prisma.mitigationAction.create({
+      data: {
+        riskId: highRisk.id,
+        description: 'Implement comprehensive bias testing framework with regular audits',
+        responsibleParty: 'AI Ethics Team',
+        dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+        status: 'PLANNED',
+      },
+    });
+  }
+
+  return {
+    riskRegister,
+    risk: highRisk,
   };
 }
 

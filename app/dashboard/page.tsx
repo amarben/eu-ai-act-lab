@@ -9,6 +9,7 @@ import { StatsCards } from '@/components/dashboard/stats-cards';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 import { RiskDistribution } from '@/components/dashboard/risk-distribution';
 import { ExportExecutiveSummaryButton } from '@/components/dashboard/export-executive-summary-button';
+import { CertificationReadinessCard } from '@/components/certification/readiness-card';
 
 async function getDashboardStats(organizationId: string) {
   const [
@@ -113,6 +114,19 @@ export default async function DashboardPage() {
 
   const stats = await getDashboardStats(session.user.organizationId);
 
+  // Get the primary (first) high-risk AI system for certification tracking
+  const primarySystem = await prisma.aISystem.findFirst({
+    where: {
+      organizationId: session.user.organizationId,
+      riskCategory: { in: ['HIGH_RISK', 'PROHIBITED'] },
+    },
+    orderBy: { createdAt: 'asc' },
+    select: {
+      id: true,
+      name: true,
+    },
+  });
+
   return (
     <div className="space-y-8">
       {/* Welcome Section */}
@@ -130,6 +144,14 @@ export default async function DashboardPage() {
 
       {/* Stats Cards */}
       <StatsCards stats={stats} />
+
+      {/* Certification Readiness (if high-risk system exists) */}
+      {primarySystem && (
+        <CertificationReadinessCard
+          systemId={primarySystem.id}
+          systemName={primarySystem.name}
+        />
+      )}
 
       {/* Main Grid */}
       <div className="grid gap-6 md:grid-cols-2">

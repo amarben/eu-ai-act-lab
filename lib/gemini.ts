@@ -690,3 +690,87 @@ Goal: Create documentation that looks professionally written, not just assembled
 
   return generateText(prompt, promptContext);
 }
+
+/**
+ * Generate certification narrative for EU AI Act compliance certificate
+ * @param certificationData - Certification validation data
+ * @returns Professional certification summary narrative
+ */
+export async function generateCertificationNarrative(certificationData: {
+  systemName: string;
+  riskCategory: string;
+  organizationName: string;
+  complianceScore: number;
+  gapAssessmentScore: number;
+  technicalDocsCompleteness: number;
+  risksCount: number;
+  mitigatedRisksCount: number;
+  governanceRolesCount: number;
+  harmonizedStandards: string[];
+  certificationDate: Date;
+}): Promise<string> {
+  const context = `You are an EU AI Act certification authority expert. Generate a formal compliance certification narrative.
+
+AI System: ${certificationData.systemName}
+Organization: ${certificationData.organizationName}
+Risk Category: ${certificationData.riskCategory}
+Certification Date: ${certificationData.certificationDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+
+Compliance Metrics:
+- Overall Compliance Score: ${certificationData.complianceScore}%
+- Gap Assessment: ${certificationData.gapAssessmentScore}% implemented
+- Technical Documentation: ${certificationData.technicalDocsCompleteness}% complete
+- Risk Management: ${certificationData.mitigatedRisksCount} of ${certificationData.risksCount} risks mitigated
+- Governance Roles: ${certificationData.governanceRolesCount} assigned roles
+- Harmonized Standards: ${certificationData.harmonizedStandards.join(', ') || 'None specified'}`;
+
+  const prompt = `Generate a professional certification narrative (400-600 words) following this structure:
+
+1. **Declaration Opening** (100 words)
+   - State the certification purpose and authority (EU AI Act Article 48)
+   - Identify the AI system, organization, and risk classification
+   - Assert conformity with EU AI Act requirements
+   - Reference date and scope of certification
+
+2. **Compliance Assessment Summary** (150 words)
+   - Describe overall compliance readiness (${certificationData.complianceScore}%)
+   - Highlight gap assessment completion and implementation status
+   - Confirm technical documentation completeness per Article 11
+   - Summarize risk management framework and mitigation effectiveness
+   - Describe governance structure and assigned responsibilities
+   - Reference harmonized standards applied (ISO/IEC standards, NIST frameworks, etc.)
+
+3. **Conformity Statement** (100 words)
+   - Formal declaration that the AI system meets EU AI Act requirements
+   - Reference specific Articles and Annexes (Article 9-15 for high-risk systems)
+   - Confirm ongoing monitoring and compliance maintenance procedures
+   - State the validity period and review requirements
+   - Mention conformity assessment procedures followed
+
+4. **Regulatory References** (75 words)
+   - Reference EU AI Act (Regulation (EU) 2024/1689)
+   - Mention applicable harmonized standards
+   - Reference quality management system per Article 17
+   - Note human oversight measures per Article 14
+   - Cite data governance per Article 10
+
+5. **Closing Statement** (75 words)
+   - Confirm the organization's commitment to ongoing compliance
+   - State contact information for regulatory inquiries
+   - Include version control and document management references
+   - Provide next review date or trigger events for reassessment
+
+Requirements:
+- Use formal, legal-appropriate language suitable for regulatory authorities
+- Include EU AI Act article references where appropriate
+- Use declarative statements of conformity and compliance
+- Maintain professional, authoritative tone throughout
+- Structure as flowing narrative paragraphs, not bullet points
+- Suitable for inclusion in official compliance certificate
+
+Audience: Regulatory authorities, auditors, notified bodies, legal counsel
+Purpose: Formal declaration of conformity under EU AI Act Article 48
+Tone: Formal, legal, authoritative, precise`;
+
+  return generateText(prompt, context);
+}
