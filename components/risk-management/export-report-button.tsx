@@ -72,10 +72,10 @@ export function ExportReportButton({ riskRegisterId, systemName }: ExportReportB
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleExport('pdf')}>
+        <DropdownMenuItem onClick={() => handleExport('pdf')} data-testid="risk-register-export-pdf">
           Export as PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('docx')}>
+        <DropdownMenuItem onClick={() => handleExport('docx')} data-testid="risk-register-export-docx">
           Export as Word (DOCX)
         </DropdownMenuItem>
       </DropdownMenuContent>

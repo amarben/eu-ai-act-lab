@@ -186,12 +186,110 @@ test.describe('Risk Management Module Demo', () => {
       await page.evaluate(() => window.scrollBy(0, 400));
       await page.waitForTimeout(wait(500));
       await page.waitForTimeout(wait(3000));
+
+      // ==========================================
+      // Scene 9: Export Risk Register Report
+      // ==========================================
+      console.log('📄 Step 10: Export Risk Register Report');
+      await page.waitForTimeout(wait(1500));
+
+      // Scroll back to top to show export button
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(wait(2000));
+
+      console.log('      🤖 Preparing to generate AI-powered risk report...');
+      console.log('         ℹ️  AI will analyze risk data and generate:');
+      console.log('         • Executive risk summary');
+      console.log('         • Risk assessment details');
+      console.log('         • Mitigation action plans');
+      await page.waitForTimeout(wait(2000));
+
+      // Set up download handler before clicking export button
+      const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
+
+      // Find and click export dropdown button (opens menu)
+      const exportButton = page.getByTestId('risk-register-export-button');
+      await expect(exportButton).toBeVisible();
+      await smoothClick(page, exportButton);
+      console.log('      ✓ Export menu opened');
+      await page.waitForTimeout(wait(500));
+
+      // Click on "Export as Word (DOCX)" menu item
+      const wordExportOption = page.getByTestId('risk-register-export-docx');
+      await expect(wordExportOption).toBeVisible();
+      await smoothClick(page, wordExportOption);
+      console.log('      ✓ Word export selected');
+      await page.waitForTimeout(wait(1000));
+
+      console.log('      ⏳ AI is generating your professional risk report...');
+      console.log('         (This takes 5-10 seconds as the AI analyzes risk data)');
+
+      // Wait for download to complete
+      const download = await downloadPromise;
+      await page.waitForTimeout(wait(1500));
+
+      // Verify and save the downloaded file
+      const fileName = download.suggestedFilename();
+      console.log('      ✅ Report generated: ' + fileName);
+
+      const downloadsPath = './test-results/downloads';
+      await download.saveAs(`${downloadsPath}/${fileName}`);
+      console.log('      ✅ Report saved to: ' + downloadsPath + '/' + fileName);
+      await page.waitForTimeout(wait(2000));
+
+      console.log('\n   📄 Report Contents:');
+      console.log('      • Cover page with system information');
+      console.log('      • AI-generated risk overview');
+      console.log('      • Detailed risk assessments with scores');
+      console.log('      • Mitigation actions with timelines');
+      console.log('      • AI-powered recommendations');
+      console.log('      • Ready to share with stakeholders\n');
+
+      console.log('   ✅ Export completed successfully!\n');
+
+      // ==========================================
+      // Scene 9.5: Open and View Generated PDF Report
+      // ==========================================
+      console.log('📄 Step 10.5: Opening generated PDF report');
+      await page.waitForTimeout(wait(1500));
+
+      // Get the saved file path
+      const savedFilePath = `${downloadsPath}/${fileName}`;
+      console.log('      📂 Opening: ' + savedFilePath);
+
+      // Open the PDF in a new page
+      const pdfPage = await page.context().newPage();
+      await pdfPage.goto(`file://${process.cwd()}/${savedFilePath}`);
+      await enableCursorTracking(pdfPage);
+      await page.waitForTimeout(wait(3000));
+
+      console.log('      ✓ PDF report opened - showing cover page');
+      await page.waitForTimeout(wait(4000));
+
+      // Scroll through PDF to show content
+      console.log('      📖 Scrolling through report sections...');
+      await pdfPage.evaluate(() => window.scrollBy(0, 800));
+      await page.waitForTimeout(wait(3000));
+
+      await pdfPage.evaluate(() => window.scrollBy(0, 800));
+      await page.waitForTimeout(wait(3000));
+
+      await pdfPage.evaluate(() => window.scrollBy(0, 800));
+      await page.waitForTimeout(wait(3000));
+
+      console.log('      ✅ Report preview complete\n');
+
+      // Close PDF page and return to main page
+      await pdfPage.close();
+      await page.bringToFront();
+      await reEnableCursorTracking(page);
+      await page.waitForTimeout(wait(2000));
     }
 
     // ==========================================
-    // Scene 9: Return to Risk Management Overview
+    // Scene 10: Return to Risk Management Overview
     // ==========================================
-    console.log('🏠 Step 10: Return to risk management overview');
+    console.log('🏠 Step 11: Return to risk management overview');
     await page.waitForTimeout(wait(1500));
 
     // Navigate back to risk management page
@@ -210,6 +308,15 @@ test.describe('Risk Management Module Demo', () => {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(wait(3000));
 
-    console.log('✅ Risk Management Module Demo Complete');
+    console.log('\n   ╔══════════════════════════════════════════════╗');
+    console.log('   ║  ✅ RISK MANAGEMENT DEMO COMPLETED!         ║');
+    console.log('   ╚══════════════════════════════════════════════╝\n');
+    console.log('   📊 Summary:');
+    console.log('      • Viewed risk management overview');
+    console.log('      • Reviewed Customer Service AI risk register');
+    console.log('      • Examined high-priority risks with mitigation actions');
+    console.log('      • Explored Biometric Authentication System risks');
+    console.log('      • Generated AI-powered risk register report');
+    console.log('      • Report ready for stakeholders and auditors\n');
   });
 });

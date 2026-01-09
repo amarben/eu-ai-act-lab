@@ -16,6 +16,10 @@ import {
   generateGapAssessmentSummary,
   generateCategoryGapAnalysis,
   generateComplianceRecommendations,
+  generateEvidenceGapAnalysis,
+  generateGapPrioritization,
+  generateImplementationRoadmap,
+  generateTrendAnalysis,
   isGeminiConfigured,
 } from '@/lib/gemini';
 
@@ -169,6 +173,10 @@ export async function generateGapAssessmentReport(data: GapAssessmentData): Prom
   // Generate AI content if available
   let executiveSummary = '';
   let recommendations = '';
+  let evidenceGaps = '';
+  let gapPrioritization = '';
+  let implementationRoadmap = '';
+  let trendAnalysis = '';
   const categoryAnalyses: Record<string, string> = {};
 
   if (isGeminiConfigured()) {
@@ -213,6 +221,61 @@ export async function generateGapAssessmentReport(data: GapAssessmentData): Prom
           })),
         });
       }
+
+      // QUICK WIN 1: Evidence Gap Analysis
+      evidenceGaps = await generateEvidenceGapAnalysis({
+        systemName: aiSystem.name,
+        categories: categoryScores.map((cat) => ({
+          name: cat.name,
+          requirements: cat.requirements.map((req) => ({
+            requirement: req.title,
+            status: req.status,
+            evidence: req.evidence.map((e) => ({ fileName: e.title })),
+            notes: req.notes || undefined,
+          })),
+        })),
+      });
+
+      // QUICK WIN 2: Gap Prioritization
+      gapPrioritization = await generateGapPrioritization({
+        systemName: aiSystem.name,
+        riskCategory: 'HIGH_RISK',
+        categories: categoryScores.map((cat) => ({
+          name: cat.name,
+          requirements: cat.requirements.map((req) => ({
+            requirement: req.title,
+            status: req.status,
+            notes: req.notes || undefined,
+          })),
+        })),
+      });
+
+      // QUICK WIN 3: Implementation Roadmap
+      implementationRoadmap = await generateImplementationRoadmap({
+        systemName: aiSystem.name,
+        overallScore,
+        categories: categoryScores.map((cat) => ({
+          name: cat.name,
+          score: cat.score,
+          total: cat.total,
+          requirements: cat.requirements.map((req) => ({
+            requirement: req.title,
+            status: req.status,
+          })),
+        })),
+      });
+
+      // QUICK WIN 4: Trend Analysis (baseline for first assessment)
+      trendAnalysis = await generateTrendAnalysis({
+        systemName: aiSystem.name,
+        overallScore,
+        assessmentDate: lastAssessedDate,
+        categories: categoryScores.map((cat) => ({
+          name: cat.name,
+          score: cat.score,
+          total: cat.total,
+        })),
+      });
     } catch (error) {
       console.error('Failed to generate AI content:', error);
       executiveSummary = 'AI-generated summary unavailable. See detailed assessment below.';
@@ -300,6 +363,50 @@ export async function generateGapAssessmentReport(data: GapAssessmentData): Prom
         } else {
           sections.push(createParagraph(line.trim(), { indent: 0.3 }));
         }
+      }
+    });
+  }
+
+  // QUICK WIN 1: Evidence Gap Analysis
+  if (evidenceGaps) {
+    sections.push(createHeading1('Evidence Gap Analysis'));
+    sections.push(createParagraph('AI-Powered Documentation Gap Detection', { bold: true }));
+    evidenceGaps.split('\n\n').forEach((para) => {
+      if (para.trim()) {
+        sections.push(createParagraph(para.trim()));
+      }
+    });
+  }
+
+  // QUICK WIN 2: Gap Prioritization
+  if (gapPrioritization) {
+    sections.push(createHeading1('Intelligent Gap Prioritization'));
+    sections.push(createParagraph('AI-Powered Priority Matrix', { bold: true }));
+    gapPrioritization.split('\n\n').forEach((para) => {
+      if (para.trim()) {
+        sections.push(createParagraph(para.trim()));
+      }
+    });
+  }
+
+  // QUICK WIN 3: Implementation Roadmap
+  if (implementationRoadmap) {
+    sections.push(createHeading1('Implementation Roadmap'));
+    sections.push(createParagraph('AI-Generated Compliance Action Plan', { bold: true }));
+    implementationRoadmap.split('\n\n').forEach((para) => {
+      if (para.trim()) {
+        sections.push(createParagraph(para.trim()));
+      }
+    });
+  }
+
+  // QUICK WIN 4: Trend Analysis
+  if (trendAnalysis) {
+    sections.push(createHeading1('Compliance Trend Analysis'));
+    sections.push(createParagraph('AI-Powered Progress Tracking & Predictions', { bold: true }));
+    trendAnalysis.split('\n\n').forEach((para) => {
+      if (para.trim()) {
+        sections.push(createParagraph(para.trim()));
       }
     });
   }

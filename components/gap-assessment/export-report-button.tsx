@@ -71,10 +71,10 @@ export function ExportReportButton({ assessmentId, systemName }: ExportReportBut
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleExport('pdf')}>
+        <DropdownMenuItem onClick={() => handleExport('pdf')} data-testid="gap-assessment-export-pdf">
           Export as PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('docx')}>
+        <DropdownMenuItem onClick={() => handleExport('docx')} data-testid="gap-assessment-export-docx">
           Export as Word (DOCX)
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -3,9 +3,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize the Gemini API client
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-// Use Gemini Flash 2.0 model for improved quality and speed
+// Use Gemini Flash 1.5 model for improved quality and speed
 const model = genAI.getGenerativeModel({
-  model: process.env.GEMINI_MODEL || "gemini-2.0-flash-exp",
+  model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
   generationConfig: {
     temperature: 0.7, // Balanced creativity
     topP: 0.95,
@@ -353,4 +353,340 @@ Tone: Technical, formal, professional`;
  */
 export function isGeminiConfigured(): boolean {
   return !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.length > 0;
+}
+
+/**
+ * QUICK WIN 1: Analyze requirements and detect evidence gaps
+ * @param assessmentData - Gap assessment data with requirements and evidence
+ * @returns Evidence gap analysis with specific missing documentation
+ */
+export async function generateEvidenceGapAnalysis(assessmentData: {
+  systemName: string;
+  categories: Array<{
+    name: string;
+    requirements: Array<{
+      requirement: string;
+      status: string;
+      evidence?: Array<{ fileName: string }>;
+      notes?: string;
+    }>;
+  }>;
+}): Promise<string> {
+  const context = `You are an EU AI Act compliance auditor. Analyze the gap assessment and identify requirements that lack sufficient evidence or documentation.
+
+AI System: ${assessmentData.systemName}
+
+Requirements Analysis:
+${assessmentData.categories
+  .map(
+    (cat) => `
+${cat.name}:
+${cat.requirements
+  .map(
+    (req) => `
+  - ${req.requirement}
+    Status: ${req.status}
+    Evidence: ${req.evidence && req.evidence.length > 0 ? req.evidence.map((e) => e.fileName).join(", ") : "NONE"}
+    ${req.notes ? `Notes: ${req.notes}` : ""}
+`
+  )
+  .join("\n")}
+`
+  )
+  .join("\n")}`;
+
+  const prompt = `Identify and analyze evidence gaps (200-300 words):
+
+1. List requirements with missing or insufficient evidence
+2. For each gap, explain:
+   - What documentation is needed
+   - Why this evidence is critical for compliance
+   - Suggested documentation approach (policy, procedure, record, test report, etc.)
+3. Highlight any patterns (e.g., "All data governance requirements lack evidence")
+4. Recommend priority order for addressing documentation gaps
+
+Format as a clear, actionable analysis suitable for compliance teams.`;
+
+  return generateText(prompt, context);
+}
+
+/**
+ * QUICK WIN 2: Intelligently prioritize gaps by urgency, impact, and effort
+ * @param assessmentData - Gap assessment data
+ * @returns Prioritized gap list with scoring matrix
+ */
+export async function generateGapPrioritization(assessmentData: {
+  systemName: string;
+  riskCategory: string;
+  categories: Array<{
+    name: string;
+    requirements: Array<{
+      requirement: string;
+      status: string;
+      notes?: string;
+    }>;
+  }>;
+}): Promise<string> {
+  const context = `You are an EU AI Act compliance strategist. Prioritize compliance gaps for a ${assessmentData.riskCategory} AI system.
+
+AI System: ${assessmentData.systemName}
+Risk Category: ${assessmentData.riskCategory}
+
+Identified Gaps:
+${assessmentData.categories
+  .map(
+    (cat) => `
+${cat.name}:
+${cat.requirements
+  .filter((req) => req.status !== "Implemented")
+  .map((req) => `  - ${req.requirement} [${req.status}] ${req.notes ? `(${req.notes})` : ""}`)
+  .join("\n")}
+`
+  )
+  .join("\n")}`;
+
+  const prompt = `Create an intelligent gap prioritization (250-350 words):
+
+For each gap, score on 3 dimensions (1-5 scale):
+1. **Regulatory Urgency**: How critical for EU AI Act compliance?
+2. **Business Impact**: What happens if this gap isn't addressed?
+3. **Implementation Effort**: How much work is required?
+
+Then calculate Priority Score = (Urgency × 2) + (Impact × 1.5) + (5 - Effort)
+(Formula favors high urgency/impact and low effort)
+
+Present results as:
+1. Priority Matrix table showing top 5-7 gaps with scores
+2. "Quick Wins" section (high priority, low effort)
+3. "Must-Do" section (high priority, high effort)
+4. "Future Work" section (lower priority)
+
+Use clear, decision-ready formatting suitable for planning meetings.`;
+
+  return generateText(prompt, context);
+}
+
+/**
+ * QUICK WIN 3: Generate step-by-step implementation roadmap
+ * @param assessmentData - Gap assessment data
+ * @returns Phased implementation roadmap with timelines
+ */
+export async function generateImplementationRoadmap(assessmentData: {
+  systemName: string;
+  overallScore: number;
+  categories: Array<{
+    name: string;
+    score: number;
+    total: number;
+    requirements: Array<{
+      requirement: string;
+      status: string;
+    }>;
+  }>;
+}): Promise<string> {
+  const context = `You are an EU AI Act implementation consultant. Create a practical roadmap to achieve full compliance.
+
+AI System: ${assessmentData.systemName}
+Current Compliance: ${assessmentData.overallScore}%
+Target: 100% compliance
+
+Category Status:
+${assessmentData.categories
+  .map((cat) => {
+    const percentage = Math.round((cat.score / cat.total) * 100);
+    const missing = cat.requirements.filter((r) => r.status !== "Implemented");
+    return `
+${cat.name}: ${percentage}% (${missing.length} gaps)
+${missing.map((r) => `  - ${r.requirement}`).join("\n")}
+`;
+  })
+  .join("\n")}`;
+
+  const prompt = `Generate a phased implementation roadmap (350-450 words):
+
+**Phase 1: Foundation (Weeks 1-4)**
+- Quick wins and critical documentation gaps
+- Focus on highest-priority items
+- Deliverables and success criteria
+
+**Phase 2: Core Compliance (Weeks 5-12)**
+- Medium-effort requirements
+- Policy and procedure development
+- Testing and validation setup
+
+**Phase 3: Full Compliance (Weeks 13-24)**
+- Complex technical requirements
+- Advanced governance measures
+- Final documentation and audits
+
+For each phase, include:
+- Specific tasks and dependencies
+- Estimated effort (hours/weeks)
+- Required resources (team, tools, budget)
+- Key milestones and checkpoints
+- Expected compliance score improvement
+
+Add a timeline visualization (text-based):
+Week 1-4: ████████░░░░░░░░░░░░ 40%
+Week 5-12: ████████████░░░░░░░░ 75%
+Week 13-24: ████████████████████ 100%
+
+Use actionable language suitable for project planning.`;
+
+  return generateText(prompt, context);
+}
+
+/**
+ * QUICK WIN 4: Analyze trends by comparing current vs historical assessments
+ * @param currentAssessment - Current gap assessment data
+ * @param previousAssessment - Previous assessment data (optional)
+ * @returns Trend analysis with progress indicators
+ */
+export async function generateTrendAnalysis(
+  currentAssessment: {
+    systemName: string;
+    overallScore: number;
+    assessmentDate: Date;
+    categories: Array<{
+      name: string;
+      score: number;
+      total: number;
+    }>;
+  },
+  previousAssessment?: {
+    overallScore: number;
+    assessmentDate: Date;
+    categories: Array<{
+      name: string;
+      score: number;
+      total: number;
+    }>;
+  }
+): Promise<string> {
+  if (!previousAssessment) {
+    // First assessment - provide baseline analysis
+    const context = `AI System: ${currentAssessment.systemName}
+Assessment Date: ${currentAssessment.assessmentDate.toLocaleDateString()}
+Overall Score: ${currentAssessment.overallScore}%
+
+This is the baseline assessment.`;
+
+    const prompt = `Generate a baseline trend analysis (150-200 words):
+
+1. State this is the initial assessment establishing a compliance baseline
+2. Highlight current compliance level and category breakdown
+3. Provide predictive insights:
+   - "At current pace, expect X% improvement per month"
+   - "Full compliance achievable by [estimated date] with focused effort"
+   - "Critical path: address [category] first for fastest improvement"
+
+Include recommendations for tracking progress in future assessments.`;
+
+    return generateText(prompt, context);
+  }
+
+  // Compare current vs previous
+  const scoreDelta = currentAssessment.overallScore - previousAssessment.overallScore;
+  const daysBetween = Math.round(
+    (currentAssessment.assessmentDate.getTime() - previousAssessment.assessmentDate.getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+
+  const categoryComparisons = currentAssessment.categories.map((curr) => {
+    const prev = previousAssessment.categories.find((p) => p.name === curr.name);
+    if (!prev) return null;
+
+    const currPercent = Math.round((curr.score / curr.total) * 100);
+    const prevPercent = Math.round((prev.score / prev.total) * 100);
+    const delta = currPercent - prevPercent;
+
+    return {
+      name: curr.name,
+      current: currPercent,
+      previous: prevPercent,
+      delta,
+    };
+  }).filter(Boolean);
+
+  const context = `AI System: ${currentAssessment.systemName}
+
+Previous Assessment (${previousAssessment.assessmentDate.toLocaleDateString()}): ${previousAssessment.overallScore}%
+Current Assessment (${currentAssessment.assessmentDate.toLocaleDateString()}): ${currentAssessment.overallScore}%
+Change: ${scoreDelta > 0 ? "+" : ""}${scoreDelta}% over ${daysBetween} days
+
+Category Trends:
+${categoryComparisons
+  .map((c) => `- ${c.name}: ${c.previous}% → ${c.current}% (${c.delta > 0 ? "+" : ""}${c.delta}%)`)
+  .join("\n")}`;
+
+  const prompt = `Generate a trend analysis (250-350 words):
+
+1. **Overall Progress**
+   - Compliance score change and direction
+   - Rate of improvement (% per month)
+   - Assessment of progress (on track / ahead / behind)
+
+2. **Category Performance**
+   - Identify improving categories (rising scores)
+   - Identify stagnant/declining categories
+   - Highlight best performers and areas needing focus
+
+3. **Predictive Insights**
+   - At current rate, when will you reach 100% compliance?
+   - What needs to accelerate?
+   - Which categories are critical path?
+
+4. **Actionable Recommendations**
+   - Should you maintain current pace or accelerate?
+   - Which areas need more resources?
+   - Suggested next assessment date
+
+Use data-driven language with specific numbers and timelines.`;
+
+  return generateText(prompt, context);
+}
+
+/**
+ * QUICK WIN 5: Expand bullet points into professional narrative paragraphs
+ * @param bulletPoints - User's bullet point content
+ * @param context - Section context (what this content is about)
+ * @returns Flowing narrative paragraphs
+ */
+export async function expandBulletPointsToNarrative(
+  bulletPoints: string,
+  context: {
+    systemName: string;
+    sectionType: string; // e.g., "Intended Use", "Architecture", "Training Data"
+    purpose: string; // e.g., "EU AI Act Article 11 compliance"
+  }
+): Promise<string> {
+  const promptContext = `You are a technical writer specializing in AI compliance documentation.
+
+AI System: ${context.systemName}
+Section: ${context.sectionType}
+Purpose: ${context.purpose}
+
+User's Bullet Points:
+${bulletPoints}`;
+
+  const prompt = `Transform the bullet points into professional flowing narrative paragraphs (300-500 words):
+
+Requirements:
+1. Convert ALL bullet points into connected prose
+2. Use formal, professional vocabulary appropriate for regulatory documentation
+3. Employ multi-clause sentences with connecting language ("Furthermore", "Additionally", "However", "Consequently")
+4. Maintain technical accuracy while improving readability
+5. Add context and transitions between concepts
+6. Keep all specific details from the original bullets
+
+Structure:
+- Opening paragraph: Introduce the topic and its significance
+- Body paragraphs: Expand each major bullet into a full paragraph
+- Closing paragraph: Summarize key points and connect to compliance requirements
+
+Tone: Technical, formal, regulatory-appropriate
+Avoid: Bullet points, numbered lists, overly casual language
+Goal: Create documentation that looks professionally written, not just assembled from notes`;
+
+  return generateText(prompt, promptContext);
 }

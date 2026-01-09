@@ -24,7 +24,7 @@ export const DEFAULT_TEST_USER: TestUser = {
  */
 export async function login(page: Page, user: TestUser = DEFAULT_TEST_USER): Promise<void> {
   // Navigate to login page
-  await page.goto('/auth/signin');
+  await page.goto('http://localhost:4000/auth/signin');
 
   // Wait for page to be fully loaded (ensures React has hydrated)
   await page.waitForLoadState('networkidle');

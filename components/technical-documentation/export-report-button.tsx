@@ -65,17 +65,17 @@ export function ExportReportButton({ documentationId, systemName, version }: Exp
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button disabled={isExporting}>
+        <Button disabled={isExporting} data-testid="technical-documentation-export-button">
           <Download className="h-4 w-4 mr-2" />
           {isExporting ? 'Exporting...' : 'Export Documentation'}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => handleExport('pdf')} disabled={isExporting}>
+        <DropdownMenuItem onClick={() => handleExport('pdf')} disabled={isExporting} data-testid="technical-documentation-export-pdf">
           <FileText className="h-4 w-4 mr-2" />
           Export as PDF
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleExport('docx')} disabled={isExporting}>
+        <DropdownMenuItem onClick={() => handleExport('docx')} disabled={isExporting} data-testid="technical-documentation-export-docx">
           <File className="h-4 w-4 mr-2" />
           Export as Word (DOCX)
         </DropdownMenuItem>

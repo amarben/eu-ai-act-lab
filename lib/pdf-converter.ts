@@ -33,8 +33,11 @@ export async function convertDocxToPdf(
     const docxPath = path.join(tmpDir, `${filename}.docx`);
     await fs.writeFile(docxPath, docxBuffer);
 
-    // Convert to PDF using LibreOffice
-    const command = `libreoffice --headless --convert-to pdf --outdir "${tmpDir}" "${docxPath}"`;
+    // Convert to PDF using LibreOffice (use soffice on macOS)
+    const libreOfficeBin = process.platform === 'darwin'
+      ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+      : 'libreoffice';
+    const command = `"${libreOfficeBin}" --headless --convert-to pdf --outdir "${tmpDir}" "${docxPath}"`;
 
     await execAsync(command, {
       timeout: 30000, // 30 second timeout
@@ -64,7 +67,10 @@ export async function convertDocxToPdf(
  */
 async function checkLibreOffice(): Promise<boolean> {
   try {
-    await execAsync('libreoffice --version', { timeout: 5000 });
+    const libreOfficeBin = process.platform === 'darwin'
+      ? '/Applications/LibreOffice.app/Contents/MacOS/soffice'
+      : 'libreoffice';
+    await execAsync(`"${libreOfficeBin}" --version`, { timeout: 5000 });
     return true;
   } catch {
     return false;

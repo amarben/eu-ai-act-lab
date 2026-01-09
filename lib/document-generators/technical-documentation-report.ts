@@ -15,6 +15,7 @@ import {
 } from 'docx';
 import {
   generateTechnicalDocumentation,
+  expandBulletPointsToNarrative,
   isGeminiConfigured,
 } from '@/lib/gemini';
 
@@ -198,6 +199,9 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     conclusion: '',
   };
 
+  // QUICK WIN 5: Expand bullet points to professional narratives
+  const expandedContent: Record<string, string> = {};
+
   if (isGeminiConfigured()) {
     try {
       const sections = {
@@ -218,6 +222,36 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
 
       aiGenerated.introduction = generated.introduction;
       aiGenerated.conclusion = generated.conclusion;
+
+      // Expand user's bullet points into flowing narratives
+      const sectionMappings = [
+        { key: 'intendedUse', data: data.intendedUse, type: 'Intended Use', purpose: 'EU AI Act Article 11(1)(a) compliance' },
+        { key: 'foreseeableMisuse', data: data.foreseeableMisuse, type: 'Foreseeable Misuse', purpose: 'Risk assessment documentation' },
+        { key: 'systemArchitecture', data: data.systemArchitecture, type: 'System Architecture', purpose: 'Technical specification documentation' },
+        { key: 'trainingData', data: data.trainingData, type: 'Training Data', purpose: 'Data governance documentation' },
+        { key: 'modelPerformance', data: data.modelPerformance, type: 'Model Performance', purpose: 'Performance validation documentation' },
+        { key: 'validationTesting', data: data.validationTesting, type: 'Validation & Testing', purpose: 'Quality assurance documentation' },
+        { key: 'humanOversightDoc', data: data.humanOversightDoc, type: 'Human Oversight', purpose: 'Oversight measures documentation' },
+        { key: 'cybersecurity', data: data.cybersecurity, type: 'Cybersecurity', purpose: 'Security measures documentation' },
+      ];
+
+      for (const section of sectionMappings) {
+        if (section.data && section.data.trim().length > 0) {
+          try {
+            expandedContent[section.key] = await expandBulletPointsToNarrative(
+              section.data,
+              {
+                systemName: aiSystem.name,
+                sectionType: section.type,
+                purpose: section.purpose,
+              }
+            );
+          } catch (error) {
+            console.error(`Failed to expand ${section.key}:`, error);
+            expandedContent[section.key] = section.data; // Fallback to original
+          }
+        }
+      }
     } catch (error) {
       console.error('Failed to generate AI content:', error);
       aiGenerated.introduction = `This document provides comprehensive technical documentation for the ${aiSystem.name} AI system in accordance with Article 11 of the EU AI Act. It describes the system's intended purpose, technical specifications, and compliance measures.`;
@@ -295,7 +329,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 11(1)(a) - Description of the intended purpose'));
     sections.push(createHeading2('Description'));
-    data.intendedUse.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.intendedUse || data.intendedUse;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -317,7 +354,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 11(1)(a) - Foreseeable misuse'));
     sections.push(createHeading2('Identified Misuse Scenarios'));
-    data.foreseeableMisuse.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.foreseeableMisuse || data.foreseeableMisuse;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -338,7 +378,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 11(1)(b) - System design and architecture'));
     sections.push(createHeading2('Architecture Description'));
-    data.systemArchitecture.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.systemArchitecture || data.systemArchitecture;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -359,7 +402,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 10 - Data and data governance, Article 11(1)(c)'));
     sections.push(createHeading2('Training Data Documentation'));
-    data.trainingData.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.trainingData || data.trainingData;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -380,7 +426,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 15 - Accuracy, robustness, and cybersecurity'));
     sections.push(createHeading2('Performance Metrics'));
-    data.modelPerformance.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.modelPerformance || data.modelPerformance;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -401,7 +450,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 9(2) - Risk management system, testing'));
     sections.push(createHeading2('Testing Procedures'));
-    data.validationTesting.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.validationTesting || data.validationTesting;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -422,7 +474,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 14 - Human oversight'));
     sections.push(createHeading2('Oversight Mechanisms'));
-    data.humanOversightDoc.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.humanOversightDoc || data.humanOversightDoc;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }
@@ -443,7 +498,10 @@ export async function generateTechnicalDocumentationReport(data: TechnicalDocume
     sections.push(createHeading2('Regulatory Reference'));
     sections.push(createParagraph('EU AI Act Article 15 - Accuracy, robustness, and cybersecurity'));
     sections.push(createHeading2('Security Measures'));
-    data.cybersecurity.split('\n\n').forEach((para) => {
+
+    // Use AI-expanded content if available, otherwise use original
+    const content = expandedContent.cybersecurity || data.cybersecurity;
+    content.split('\n\n').forEach((para) => {
       if (para.trim()) {
         sections.push(createParagraph(para.trim()));
       }

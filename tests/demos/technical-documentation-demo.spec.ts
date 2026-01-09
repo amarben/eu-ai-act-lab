@@ -179,18 +179,113 @@ test.describe('Technical Documentation Module Demo', () => {
     await page.waitForTimeout(wait(2000));
 
     // ==========================================
-    // Scene 8: Navigate Back to Documentation List
+    // Scene 8: Export Technical Documentation
     // ==========================================
-    console.log('🔙 Step 9: Return to documentation list');
+    console.log('📄 Step 9: Export Technical Documentation Report');
+    await page.waitForTimeout(wait(1500));
+
+    console.log('      🤖 Preparing to generate AI-powered technical documentation...');
+    console.log('         ℹ️  AI will analyze documentation and generate:');
+    console.log('         • Executive summary');
+    console.log('         • Complete Article 11 sections');
+    console.log('         • Technical specifications');
+    await page.waitForTimeout(wait(2000));
+
+    // Set up download handler before clicking export button
+    const downloadPromise = page.waitForEvent('download', { timeout: 60000 });
+
+    // Find and click export dropdown button (opens menu)
+    const exportButton = page.getByTestId('technical-documentation-export-button');
+    await expect(exportButton).toBeVisible();
+    await smoothClick(page, exportButton);
+    console.log('      ✓ Export menu opened');
+    await page.waitForTimeout(wait(500));
+
+    // Click on "Export as Word (DOCX)" menu item
+    const wordExportOption = page.getByTestId('technical-documentation-export-docx');
+    await expect(wordExportOption).toBeVisible();
+    await smoothClick(page, wordExportOption);
+    console.log('      ✓ Word export selected');
+    await page.waitForTimeout(wait(1000));
+
+    console.log('      ⏳ AI is generating your professional technical documentation...');
+    console.log('         (This takes 5-10 seconds as the AI analyzes documentation data)');
+
+    // Wait for download to complete
+    const download = await downloadPromise;
+    await page.waitForTimeout(wait(1500));
+
+    // Verify and save the downloaded file
+    const fileName = download.suggestedFilename();
+    console.log('      ✅ Report generated: ' + fileName);
+
+    const downloadsPath = './test-results/downloads';
+    await download.saveAs(`${downloadsPath}/${fileName}`);
+    console.log('      ✅ Report saved to: ' + downloadsPath + '/' + fileName);
+    await page.waitForTimeout(wait(2000));
+
+    console.log('\n   📄 Report Contents:');
+    console.log('      • Cover page with system information');
+    console.log('      • AI-generated executive summary');
+    console.log('      • Complete EU AI Act Article 11 documentation');
+    console.log('      • Technical specifications and architecture');
+    console.log('      • Training data and model performance');
+    console.log('      • Validation testing and human oversight');
+    console.log('      • Ready for regulatory submission\n');
+
+    console.log('   ✅ Export completed successfully!\n');
+
+    // ==========================================
+    // Scene 8.5: Open and View Generated PDF Report
+    // ==========================================
+    console.log('📄 Step 9.5: Opening generated PDF report');
+    await page.waitForTimeout(wait(1500));
+
+    // Get the saved file path
+    const savedFilePath = `${downloadsPath}/${fileName}`;
+    console.log('      📂 Opening: ' + savedFilePath);
+
+    // Open the PDF in a new page
+    const pdfPage = await page.context().newPage();
+    await pdfPage.goto(`file://${process.cwd()}/${savedFilePath}`);
+    await enableCursorTracking(pdfPage);
+    await page.waitForTimeout(wait(3000));
+
+    console.log('      ✓ PDF report opened - showing cover page');
+    await page.waitForTimeout(wait(4000));
+
+    // Scroll through PDF to show content
+    console.log('      📖 Scrolling through report sections...');
+    await pdfPage.evaluate(() => window.scrollBy(0, 800));
+    await page.waitForTimeout(wait(3000));
+
+    await pdfPage.evaluate(() => window.scrollBy(0, 800));
+    await page.waitForTimeout(wait(3000));
+
+    await pdfPage.evaluate(() => window.scrollBy(0, 800));
+    await page.waitForTimeout(wait(3000));
+
+    console.log('      ✅ Report preview complete\n');
+
+    // Close PDF page and return to main page
+    await pdfPage.close();
+    await page.bringToFront();
+    await reEnableCursorTracking(page);
+    await page.waitForTimeout(wait(2000));
+
+    // ==========================================
+    // Scene 9: Navigate Back to Documentation List
+    // ==========================================
+    console.log('🔙 Step 10: Return to documentation list');
     await page.goto('/dashboard/documentation');
     await page.waitForLoadState('networkidle');
     await reEnableCursorTracking(page);
     await page.waitForTimeout(wait(3000));
 
     // ==========================================
-    // Scene 9: View Second Documentation (75% Complete, Under Review)
+    // Scene 10: View Second Documentation (75% Complete, Under Review)
     // ==========================================
-    console.log('⏳ Step 10: View in-progress documentation (Biometric Authentication)');
+    console.log('⏳ Step 11: View in-progress documentation (Biometric Authentication)');
 
     // Scroll to see documentation cards
     await page.evaluate(() => window.scrollBy(0, 300));
@@ -236,9 +331,9 @@ test.describe('Technical Documentation Module Demo', () => {
     }
 
     // ==========================================
-    // Scene 10: View Third Documentation (37.5% Complete, Draft)
+    // Scene 11: View Third Documentation (37.5% Complete, Draft)
     // ==========================================
-    console.log('📝 Step 11: View draft documentation (Content Moderation)');
+    console.log('📝 Step 12: View draft documentation (Content Moderation)');
 
     // Navigate back to list
     await page.goto('/dashboard/documentation');
@@ -282,9 +377,9 @@ test.describe('Technical Documentation Module Demo', () => {
     }
 
     // ==========================================
-    // Scene 11: Return to Documentation Overview
+    // Scene 12: Return to Documentation Overview
     // ==========================================
-    console.log('🏠 Step 12: Return to documentation overview');
+    console.log('🏠 Step 13: Return to documentation overview');
     await page.goto('/dashboard/documentation');
     await page.waitForLoadState('networkidle');
     await reEnableCursorTracking(page);
@@ -303,6 +398,15 @@ test.describe('Technical Documentation Module Demo', () => {
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.waitForTimeout(wait(3000));
 
-    console.log('✅ Technical Documentation Module Demo Complete');
+    console.log('\n   ╔══════════════════════════════════════════════╗');
+    console.log('   ║  ✅ TECHNICAL DOCUMENTATION DEMO COMPLETED! ║');
+    console.log('   ╚══════════════════════════════════════════════╝\n');
+    console.log('   📊 Summary:');
+    console.log('      • Viewed documentation overview and statistics');
+    console.log('      • Reviewed complete Customer Service AI documentation');
+    console.log('      • Generated AI-powered Article 11 compliance report');
+    console.log('      • Explored in-progress Biometric Authentication docs');
+    console.log('      • Examined draft Content Moderation documentation');
+    console.log('      • Report ready for regulatory submission\n');
   });
 });
